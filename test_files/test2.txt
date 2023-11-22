@@ -1,7 +1,7 @@
 if id < 2.0 then
-    id <-- 3;
+    id <-- 3
 else
-    id <-- 1..0
+    id <-- 1.0
 end if;
 if id < 2.0 then
     id <-- 3

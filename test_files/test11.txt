@@ -1,0 +1,6 @@
+if id < 2.0 then
+    x <-- 3
+end if;
+id > 0 then
+    id <-- 1000
+end if

@@ -1,10 +1,6 @@
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.io.PushbackReader;
-
+// Parser top-down a discesa ricorsiva.
 public class Parser {
-    private Lexer lexer;
+    private final Lexer lexer;
     private Token currentToken;
 
     public Parser(String filePath) {
@@ -21,86 +17,96 @@ public class Parser {
         return currentToken;
     }
 
-    public void parse() {
-        program();
-        match("EOF");
-    }
-
-    private void program() {
-        stmt();
-        while (currentToken.getName().equals(";")) {
-            match(";");
-            stmt();
+    // Encoding the S (initial symbol) production.
+    public boolean parse() {
+        if (program()) {
+            return currentToken.getName().equals("EOF");
         }
+        return false;
     }
 
-    private void stmt() {
-        switch (currentToken.getName()) {
-            case "IF" -> {
-                match("IF");
-                expr();
-                match("THEN");
-                stmt();
-                if (currentToken.getName().equals("ELSE")) {
-                    match("ELSE");
-                    stmt();
-                }
-                match("END IF");
-            }
-            case "ID" -> {
-                String id = currentToken.getAttribute();
-                match("ID");
-                if (currentToken.getName().equals("ASSIGN")) {
-                    match("ASSIGN");
-                    expr();
-                    // Perform assignment of the ID
-                    System.out.println("Assigning " + id);
+
+    private boolean program() {
+        if (stmt()) {
+            while (match(";")) {
+                if (!stmt()){
+                    return false;
                 }
             }
-            case "WHILE" -> {
-                match("WHILE");
-                expr();
-                match("LOOP");
-                stmt();
-                match("END LOOP");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean stmt() {
+        if (match(Token.IF)) {
+            if (expr()) {
+                if (match(Token.THEN)) {
+                    if (stmt()) {
+                        if (match(Token.END_IF)) {
+                            return true;
+                        }
+                        if (match(Token.ELSE)) {
+                            if (stmt()) {
+                                if (match(Token.END_IF)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
-
-    private void expr() {
-        term();
-        while (currentToken.getName().equals("RELOP")) {
-            match("RELOP");
-            term();
+        if (match(Token.ID)) {
+            if (match(Token.ASSIGN)) {
+                return expr();
+            }
+            return false;
         }
-    }
-
-    private void term() {
-        if (currentToken.getName().equals("ID")) {
-            match("ID");
-        } else if (currentToken.getName().equals("NUMBER")) {
-            match("NUMBER");
-        } else {
-            // Handle error
-            System.err.println("Syntax error: ID or NUMBER expected, but got " + currentToken.getName());
-            System.exit(1);
+        if (match(Token.WHILE)) {
+            if (expr()) {
+                if (match(Token.LOOP)) {
+                    if (stmt()) {
+                        return match(Token.END_LOOP);
+                    }
+                }
+            }
+            return false;
         }
+        return false;
     }
 
-    private void match(String expectedTokenType) {
+    private boolean expr() {
+        // Implementing lookahead by checking everything from FIRST(alpha).
+        if (match(Token.ID)) {
+            if (match(Token.RELOP)) {
+                return expr();
+            }
+            return true;
+        }
+        if (match(Token.NUMBER)) {
+            if (match(Token.RELOP)) {
+                return expr();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Returns whether there's a match between the expected terminal token and the currently scanned token.
+    // If there's a match, we also move to the next token as we're doing fine with the current non-terminal.
+    private boolean match(String expectedTerminalToken) {
         String currentTokenName = currentToken.getName();
-        if (currentTokenName.equals(expectedTokenType)) {
-            if (currentTokenName.equals("EOF")) {
-                return;
-            }
-            try {
-                currentToken = lexer.nextToken();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            System.err.println("Syntax error: " + expectedTokenType + " expected, but got " + currentToken.getName());
-            System.exit(1);
+        if (!currentTokenName.equals(expectedTerminalToken)) {
+            return false;
         }
+        try {
+            if (!currentTokenName.equals("EOF")) {
+                currentToken = lexer.nextToken();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
     }
 }
